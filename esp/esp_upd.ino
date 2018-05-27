@@ -2,15 +2,9 @@
 
 #include <WiFiUdp.h>
 
-
-
-const char* ssid = "HYPERION";
-
-const char* password = "guesswhat";
-
-
-
-const char * udpAddress = "192.168.0.3";
+const char* ssid = "";
+const char* password = "";
+const char * udpAddress = "";
 
 const int udpPort = 3333;
 
@@ -18,16 +12,7 @@ const int udpPort = 3333;
 
 String buff;
 
-
-
-
-
-
-
 WiFiUDP udp;
-
-
-
 void setup()
 
 {
@@ -35,42 +20,21 @@ void setup()
   Serial.begin(115200);
 
   Serial.println();
-
-
-
   Serial.printf("Connecting to %s ", ssid);
-
   WiFi.begin(ssid, password);
-
   while (WiFi.status() != WL_CONNECTED)
 
   {
 
     delay(500);
-
     Serial.print(".");
-
   }
 
-  Serial.println(" connected");
-
-
-
-  
+  Serial.println(" connected"); 
 
   Serial.printf("Web server started, open %s in a web browser\n", WiFi.localIP().toString().c_str());
 
 }
-
-
-
-
-
-// prepare a web page to be send to a client (web browser)
-
-
-
-
 
 void loop()
 
