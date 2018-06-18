@@ -83,17 +83,17 @@ MPU9250 mpu;
 // uncomment "OUTPUT_READABLE_QUATERNION" if you want to see the actual
 // quaternion components in a [w, x, y, z] format (not best for parsing
 // on a remote host such as Processing or something though)
-#define OUTPUT_READABLE_QUATERNION
+//#define OUTPUT_READABLE_QUATERNION
 
 // добавление вывода данных магнитометра датчика с помощью DMP
 #define OUTPUT_COMPASS
-
+#define OUTPUT_READABLE_WORLDACCEL
 // uncomment "OUTPUT_READABLE_YAWPITCHROLL" if you want to see the yaw/
 // pitch/roll angles (in degrees) calculated from the quaternions coming
 // from the FIFO. Note this also requires gravity vector calculations.
 // Also note that yaw/pitch/roll angles suffer from gimbal lock (for
 // more info, see: http://en.wikipedia.org/wiki/Gimbal_lock)
-// #define OUTPUT_READABLE_YAWPITCHROLL
+ #define OUTPUT_READABLE_YAWPITCHROLL
 
 // uncomment "OUTPUT_TEAPOT" if you want output that matches the
 // format used for the InvenSense teapot demo
@@ -114,6 +114,12 @@ uint16_t fifoCount;     // count of all bytes currently in FIFO
 uint8_t fifoBuffer[64]; // FIFO storage buffer
 float f_mag[3];         // данные магнитометра после преобразования согласно даташиту
 float d_mag[4];
+VectorInt16 aa;         // [x, y, z]            accel sensor measurements
+VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
+VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
+VectorFloat gravity;    // [x, y, z]            gravity vector
+int16_t gydata[3]    ;
+
 
 // orientation/motion vars
 Quaternion q;           // [w, x, y, z]         quaternion container
@@ -227,18 +233,7 @@ void loop() {
     if (!dmpReady) return;
 
     // wait for MPU interrupt or extra packet(s) available
-    while (!mpuInterrupt && fifoCount < packetSize) {
-        // other program behavior stuff here
-        // .
-        // .
-        // .
-        // if you are really paranoid you can frequently test in between other
-        // stuff to see if mpuInterrupt is true, and if so, "break;" from the
-        // while() loop to immediately process the MPU data
-        // .
-        // .
-        // .
-    }
+    
 
     // reset interrupt flag and get INT_STATUS byte
     mpuInterrupt = false;
@@ -289,7 +284,7 @@ void loop() {
             VectorFloat v_mag(f_mag[0], f_mag[1], f_mag[2]);    // создаем вектор магнитометра
             v_mag = v_mag.getNormalized();                      // нормализуем вектор
             v_mag = v_mag.getRotated(&q_mag);                   // поворачиваем
-            float phi = atan2(v_mag.y, v_mag.x)/3.1416;         // получаем значения угла в радианах между X, Y
+            /*float phi = atan2(v_mag.y, v_mag.x)/3.1416;         // получаем значения угла в радианах между X, Y
             Quaternion q_mag(0.1*phi, 0, 0, 1);                 // создаем коррекционный кватернион
             q = q_mag.getProduct(q);                            // перемножаем кватернионы для коррекции основного
             q.normalize();                                      // нормализуем кватернион
@@ -299,9 +294,46 @@ void loop() {
             Serial.print(",");
             Serial.print(q.y);
             Serial.print(",");
-            Serial.println(q.z);
+            Serial.println(q.z);*/
+           /* Serial.print(v_mag.x);Serial.print("\t");
+            Serial.print(v_mag.y);Serial.print("\t");
+            Serial.print(v_mag.z);Serial.print("\t"); */
+        #endif
+      
+   
+        #ifdef OUTPUT_READABLE_WORLDACCEL
+            // display initial world-frame acceleration, adjusted to remove gravity
+            // and rotated based on known orientation from quaternion
+            mpu.dmpGetQuaternion(&q, fifoBuffer);
+            mpu.dmpGetAccel(&aa, fifoBuffer);
+            mpu.dmpGetGravity(&gravity, &q);
+            mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
+            mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
+            
+            mpu.dmpGetGyro(gydata,fifoBuffer);
+            Serial.print(aaReal.x);
+            Serial.print("\t");
+            Serial.print(aaReal.y);
+            Serial.print("\t");
+            Serial.print(aaReal.z);
+            Serial.print("\t");
+            
+             Serial.print(aaWorld.x);
+            Serial.print("\t");
+            Serial.print(aaWorld.y);
+            Serial.print("\t");
+            Serial.print(aaWorld.z);
+            Serial.print("\t");
+            Serial.print(gydata[0]);
+            Serial.print("\t");
+            Serial.print(gydata[1]);
+            Serial.print("\t");
+            Serial.print(gydata[2]); 
+            Serial.print("\t");
+            
         #endif
 
+          float ypr[3];
         #ifdef OUTPUT_READABLE_YAWPITCHROLL
             // display Euler angles in degrees
             mpu.dmpGetQuaternion(&q, fifoBuffer);
@@ -312,26 +344,7 @@ void loop() {
             Serial.print("\t");
             Serial.print(ypr[1] * 180/M_PI);
             Serial.print("\t");
-            Serial.print(ypr[2] * 180/M_PI);
+            Serial.println(ypr[2] * 180/M_PI);
         #endif
-   
-        #ifdef OUTPUT_TEAPOT
-            // display quaternion values in InvenSense Teapot demo format:
-            teapotPacket[2] = fifoBuffer[0];
-            teapotPacket[3] = fifoBuffer[1];
-            teapotPacket[4] = fifoBuffer[4];
-            teapotPacket[5] = fifoBuffer[5];
-            teapotPacket[6] = fifoBuffer[8];
-            teapotPacket[7] = fifoBuffer[9];
-            teapotPacket[8] = fifoBuffer[12];
-            teapotPacket[9] = fifoBuffer[13];
-            Serial.write(teapotPacket, 14);
-            teapotPacket[11]++; // packetCount, loops at 0xFF on purpose
-        #endif
-
-        // blink LED to indicate activity
-        blinkState = !blinkState;
-        digitalWrite(LED_PIN, blinkState);
     }
 }
-
