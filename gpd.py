@@ -2,7 +2,7 @@ import math
 import numpy as np 
 import socket
 
-# declare global variables in separate module and import it in all module that require it
+# global variables
 a_bq = []
 a_mq = []
 w_mq = []
@@ -10,13 +10,14 @@ a_localq = []
 d_q = []
 sc_q = []
 sd_q = []
+last_val = True
+Mc_prev = 0
+Md_prev = 0
 
 def gpd():
-    # a_b is vector
-    global a_bq, a_mq, w_mq, a_localq, d_q, sc_q, sd_q
+    global a_bq, a_mq, w_mq, a_localq, d_q, sc_q, sd_q, last_val, Mc_prev, Md_prev
 
     t = len(a_bq) - 1
-    #
     s = 10
     if t >= 2*s + 1:
         a_local_squared = 0
@@ -59,6 +60,7 @@ def gpd():
     else:
         max_cd = sd_q[-1]
     
+    """
     if len(sc_q) <= 100:
         Mc = max(sc_q)
     else:
@@ -67,14 +69,46 @@ def gpd():
         Md = max(sd_q)
     else:
         Md = max(sd_q[-100:-50])
-    
+    """
+
+    Mc = max(sc_q[-1], Mc_prev)
+    Md = max(sd_q[-1], Md_prev)
 
     th = abs(Mc - Md)
     
     if max_cd <= th:
-        return True, th
+        curr_val = True
+        if curr_val != last_val:
+            reset()
+        last_val = curr_val
+        Mc_prev = Mc
+        Md_prev = Md
+        return curr_val, th
     else:
-        return False, th
+        curr_val = False
+        if curr_val != last_val:
+            reset()
+        last_val = curr_val
+        Mc_prev = Mc
+        Md_prev = Md
+        return curr_val, th
+
+def reset():
+    global a_bq, a_mq, w_mq, a_localq, d_q, sc_q, sd_q
+    if len(a_bq) >= 50:
+        a_bq = a_bq[-49:-1]
+    if len(a_mq) >= 50:
+        a_mq = a_mq[-49:-1]
+    if len(w_mq) >= 50:
+        w_mq = w_mq[-49:-1]
+    if len(a_localq) >= 10:
+        a_localq = a_localq[-9:-1]
+    if len(d_q) >= 10:
+        d_q = d_q[-9:-1]
+    if len(sc_q) >= 10:
+        sc_q = sc_q[-9:-1]
+    if len(sd_q) >= 10:
+        sd_q = sd_q[-9:-1]
 
 
 #initializations
